@@ -1,0 +1,142 @@
+<style type="text/css">
+	.article{
+		border: 0.3rem solid black;
+		text-align: center;
+		width: 9rem;
+		height: 18rem;
+		margin: 0.5rem;
+	}
+	.article>img{
+		width: 7.5rem;
+		height: 15rem;
+	}
+	h1,p{
+		margin: 0rem;	
+	}
+	.container{
+		display: grid;
+		grid-template-columns: 1fr 1fr 1fr;
+		/*grid-template-rows: 1fr 1fr 1fr;*/
+	}
+</style>
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>DBZ-API</title>
+</head>
+<body>
+
+	<h1>Personajes de Dragon Ball</h1>
+	<label for="select">Filtar por raza: </label>
+	<select id="select" oninput="cambiar()">
+		<option value="Todos">--Ver todos--</option>
+	</select>
+	<div class="container"></div>
+</body>
+</html>
+
+<script type="text/javascript">
+
+let container = document.querySelector(".container")
+//let valor = document.getElementById("dbz").value 
+
+//código para consumir la api, se ejecuta después del código sincronico
+async function obtenerPost() {
+	try {
+		const p1 = fetch("https://dragonball-api.com/api/characters?limit=10")
+		const p2 = fetch("https://dragonball-api.com/api/characters?page=2&limit=10")
+		const p3 = fetch("https://dragonball-api.com/api/characters?page=3&limit=10")
+		const p4 = fetch("https://dragonball-api.com/api/characters?page=4&limit=10")
+		const p5 = fetch("https://dragonball-api.com/api/characters?page=5&limit=10")
+		const p6 = fetch("https://dragonball-api.com/api/characters?page=6&limit=10")
+		const respuesta = await Promise.all([p1,p2,p3,p4,p5,p6]) //se obtiene respuesta de todos los fetch
+		const datos = await Promise.all(respuesta.map(r => r.json())) //convierte a respuesta en json
+		console.log(datos) //arreglo con paginas
+		console.log(datos[0]) //pagina 1 (cada pagina es un objeto)
+		console.log(datos[0].items) //items de pagina 1 (es un arreglo)
+
+		//puede obtenerse un status de un Promise.all?
+		//parece que es undefined
+		/*
+		console.log("Post obtenido:", respuesta);
+		console.log('Código HTTP de respuesta:', respuesta.status);
+		console.log("La respuesta contiene:", respuesta);
+		if (!respuesta.ok) {
+			throw new Error("Error en la solicitud: " + respuesta.status);
+		}
+		//const datos = await respuesta.json();
+		//console.log("Post obtenido:", datos);
+		//console.log(datos.items) //es un arreglo
+		*/
+
+
+		//datos es un arreglo con todas las paginas
+		//paginas son objetos con "items", "meta" y "links"
+		datos.forEach((paginas)=>{
+			paginas.items.forEach((objetos_atributos)=>{
+				//console.log(objeto_atributos.race)
+				let select = document.getElementById("select") 
+				const optionstext = Array.from(select.options).map((opt) => opt.text) //es un arreglo con los values
+					if(!optionstext.includes(objetos_atributos.race)){
+						select.innerHTML += `<option value="${objetos_atributos.race}">${objetos_atributos.race}</option>`
+					}
+					container.innerHTML +=
+					`
+					<article class="article">
+						<h1>${objetos_atributos.name}</h1>
+						<img src="${objetos_atributos.image}">
+						<p><b>Raza</b>: ${objetos_atributos.race}</p>
+					</article>
+					`
+			})
+		})
+		
+		//se le asigna dinamicamente la funcion cambiar de tipo "oninput" al select
+		//debe hacerse así ya que o sino dira que la función cambiar no está definida, esto porque debido a que
+		//la definición de esta función está dentro de una tarea asincronica (la cual toma algo de tiempo), el código que
+		//permite que definir esta funcion no se ejecuta el mismo tiempo que el onclick="cambiar()" que está en el select de html
+		//por lo tanto cuando el select busca a la funcion cambiar(), esta aún no existe porque la tarea asincronica que contiene
+		//a la definición de la función cambiar() aún no ha terminado
+		//por eso en la tarea asincronica se le debe otorgar esta función al select, mediante:
+		document.getElementById("select").oninput = 
+		function cambiar(){
+		container.innerHTML = ""
+		let valor = document.getElementById("select").value //debe definirse el valor cada vez que e cambie la option, para que se actualice, o sino se queda como se definió al inicio
+		console.log(valor) //opcion actualmente siendo seleccionada
+		
+			datos.forEach((paginas)=>{
+				paginas.items.forEach((objetos_atributos)=>{
+					if(valor == objetos_atributos.race){
+						container.innerHTML +=
+						`
+						<article class="article">
+							<h1>${objetos_atributos.name}</h1>
+							<img src="${objetos_atributos.image}">
+							<p><b>Raza</b>: ${objetos_atributos.race}</p>
+						</article>				`
+					}
+					if(valor == "Todos"){
+						container.innerHTML +=
+						`
+						<article class="article">
+							<h1>${objetos_atributos.name}</h1>
+							<img src="${objetos_atributos.image}">
+							<p><b>Raza</b>: ${objetos_atributos.race}</p>
+						</article>				`
+					}					
+				})
+			})
+		}	
+	} 
+	catch (error) {
+		console.error("Ocurrió un error:", error.message);
+	}
+}
+obtenerPost(); //debe ejecutarse la función
+
+//Código sincronico se va a ejecutar antes de lo asincronico 
+//(async = generar promesa, await = una respuesta a esa promesa)
+
+</script>
